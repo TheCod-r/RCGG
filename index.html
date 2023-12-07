@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Random Chess Game Generator!</title>
+    <link rel="preload" as="style" type="text/css" href="style.css" crossorigin>
+    <link rel="icon" type="image/x-icon" href="k.svg">
+    <link rel="prefetch" href="bK.svg">
+    <link rel="prefetch" href="wK.svg">
+    <link rel="prefetch" href="bQ.svg">
+    <link rel="prefetch" href="wQ.svg">
+    <link rel="prefetch" href="bP.svg">
+    <link rel="prefetch" href="wP.svg">
+    <link rel="prefetch" href="bR.svg">
+    <link rel="prefetch" href="wR.svg">
+    <link rel="prefetch" href="bB.svg">
+    <link rel="prefetch" href="wB.svg">
+    <link rel="prefetch" href="bN.svg">
+    <link rel="prefetch" href="wN.svg">
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+  <body>
+    <h1>Welcome to RCGG (Random Chess Game Generator)!</h1>
+    <p>Some stuff to know:</p>
+    <ul>
+      <li>Standard chess and all <a href="https://lichess.org/variant/" target="_blank">8 Lichess variants</a> are supported.</li>
+      <li>The code for standard chess took around a week to make, and so did making the 8 variants.</li>
+      <li>This whole thing was made from scratch.</li>
+      <li>The piece set used here is <a href='https://github.com/lichess-org/lila/tree/master/public/piece/merida' target='_blank'>Merida</a> from Lichess!</li>
+    </ul>
+    <p>Pick a variant:</p>
+    <select id="variant">
+      <option>Standard</option>
+      <option>Crazyhouse</option>
+      <option>Chess960</option>
+      <option>King of the Hill</option>
+      <option>Three-check</option>
+      <option>Antichess</option>
+      <option>Atomic</option>
+      <option>Horde</option>
+      <option>Racing Kings</option>
+    </select><br>
+    <label>Separate moves in new line</label>
+    <input type="checkbox" id="separate"><br>
+    <button id="button" onclick="generate()">Go!</button>
+    <table id="table">
+    </table>
+    <button id="copy" onclick="copy()">Copy text (only works for desktop)</button>
+    <p id="game" data-copy="#game"></p>
+    <textarea id="copyable"></textarea>
+    <p>To get a runnable not-just-text version of the game, copy the text above and paste it in <a href="https://lichess.org/paste" target="_blank">lichess.org/paste</a>!</p>
+    <script>
+      const $ = q => document.querySelector(q);
+      var rf = false; // Race finished
+      var exists = true;
+      var qr = 0;
+      var kr = 0;
+      var kk = 0;
+      var sp = "";
+      var whiteToMove = true;
+      var bpocket = [];
+      var wpocket = [];
+      var wchecks = 0;
+      var bchecks = 0;
+      var promoted = []; // Keep track of which squares have promoted pieces that were pawns
+      var forTest = "";
+      // Chess960 positions
+      var chess960 = [];
+      {
+        chess960 = ["bbqnnrkr","bqnbnrkr","bqnnrbkr","bqnnrkrb","qbbnnrkr","qnbbnrkr","qnbnrbkr","qnbnrkrb","qbnnbrkr","qnnbbrkr","qnnrbbkr","qnnrbkrb","qbnnrkbr","qnnbrkbr","qnnrkbbr","qnnrkrbb","bbnqnrkr","bnqbnrkr","bnqnrbkr","bnqnrkrb","nbbqnrkr","nqbbnrkr","nqbnrbkr","nqbnrkrb","nbqnbrkr","nqnbbrkr","nqnrbbkr","nqnrbkrb","nbqnrkbr","nqnbrkbr","nqnrkbbr","nqnrkrbb","bbnnqrkr","bnnbqrkr","bnnqrbkr","bnnqrkrb","nbbnqrkr","nnbbqrkr","nnbqrbkr","nnbqrkrb","nbnqbrkr","nnqbbrkr","nnqrbbkr","nnqrbkrb","nbnqrkbr","nnqbrkbr","nnqrkbbr","nnqrkrbb","bbnnrqkr","bnnbrqkr","bnnrqbkr","bnnrqkrb","nbbnrqkr","nnbbrqkr","nnbrqbkr","nnbrqkrb","nbnrbqkr","nnrbbqkr","nnrqbbkr","nnrqbkrb","nbnrqkbr","nnrbqkbr","nnrqkbbr","nnrqkrbb","bbnnrkqr","bnnbrkqr","bnnrkbqr","bnnrkqrb","nbbnrkqr","nnbbrkqr","nnbrkbqr","nnbrkqrb","nbnrbkqr","nnrbbkqr","nnrkbbqr","nnrkbqrb","nbnrkqbr","nnrbkqbr","nnrkqbbr","nnrkqrbb","bbnnrkrq","bnnbrkrq","bnnrkbrq","bnnrkrqb","nbbnrkrq","nnbbrkrq","nnbrkbrq","nnbrkrqb","nbnrbkrq","nnrbbkrq","nnrkbbrq","nnrkbrqb","nbnrkrbq","nnrbkrbq","nnrkrbbq","nnrkrqbb","bbqnrnkr","bqnbrnkr","bqnrnbkr","bqnrnkrb","qbbnrnkr","qnbbrnkr","qnbrnbkr","qnbrnkrb","qbnrbnkr","qnrbbnkr","qnrnbbkr","qnrnbkrb","qbnrnkbr","qnrbnkbr","qnrnkbbr","qnrnkrbb","bbnqrnkr","bnqbrnkr","bnqrnbkr","bnqrnkrb","nbbqrnkr","nqbbrnkr","nqbrnbkr","nqbrnkrb","nbqrbnkr","nqrbbnkr","nqrnbbkr","nqrnbkrb","nbqrnkbr","nqrbnkbr","nqrnkbbr","nqrnkrbb","bbnrqnkr","bnrbqnkr","bnrqnbkr","bnrqnkrb","nbbrqnkr","nrbbqnkr","nrbqnbkr","nrbqnkrb","nbrqbnkr","nrqbbnkr","nrqnbbkr","nrqnbkrb","nbrqnkbr","nrqbnkbr","nrqnkbbr","nrqnkrbb","bbnrnqkr","bnrbnqkr","bnrnqbkr","bnrnqkrb","nbbrnqkr","nrbbnqkr","nrbnqbkr","nrbnqkrb","nbrnbqkr","nrnbbqkr","nrnqbbkr","nrnqbkrb","nbrnqkbr","nrnbqkbr","nrnqkbbr","nrnqkrbb","bbnrnkqr","bnrbnkqr","bnrnkbqr","bnrnkqrb","nbbrnkqr","nrbbnkqr","nrbnkbqr","nrbnkqrb","nbrnbkqr","nrnbbkqr","nrnkbbqr","nrnkbqrb","nbrnkqbr","nrnbkqbr","nrnkqbbr","nrnkqrbb","bbnrnkrq","bnrbnkrq","bnrnkbrq","bnrnkrqb","nbbrnkrq","nrbbnkrq","nrbnkbrq","nrbnkrqb","nbrnbkrq","nrnbbkrq","nrnkbbrq","nrnkbrqb","nbrnkrbq","nrnbkrbq","nrnkrbbq","nrnkrqbb","bbqnrknr","bqnbrknr","bqnrkbnr","bqnrknrb","qbbnrknr","qnbbrknr","qnbrkbnr","qnbrknrb","qbnrbknr","qnrbbknr","qnrkbbnr","qnrkbnrb","qbnrknbr","qnrbknbr","qnrknbbr","qnrknrbb","bbnqrknr","bnqbrknr","bnqrkbnr","bnqrknrb","nbbqrknr","nqbbrknr","nqbrkbnr","nqbrknrb","nbqrbknr","nqrbbknr","nqrkbbnr","nqrkbnrb","nbqrknbr","nqrbknbr","nqrknbbr","nqrknrbb","bbnrqknr","bnrbqknr","bnrqkbnr","bnrqknrb","nbbrqknr","nrbbqknr","nrbqkbnr","nrbqknrb","nbrqbknr","nrqbbknr","nrqkbbnr","nrqkbnrb","nbrqknbr","nrqbknbr","nrqknbbr","nrqknrbb","bbnrkqnr","bnrbkqnr","bnrkqbnr","bnrkqnrb","nbbrkqnr","nrbbkqnr","nrbkqbnr","nrbkqnrb","nbrkbqnr","nrkbbqnr","nrkqbbnr","nrkqbnrb","nbrkqnbr","nrkbqnbr","nrkqnbbr","nrkqnrbb","bbnrknqr","bnrbknqr","bnrknbqr","bnrknqrb","nbbrknqr","nrbbknqr","nrbknbqr","nrbknqrb","nbrkbnqr","nrkbbnqr","nrknbbqr","nrknbqrb","nbrknqbr","nrkbnqbr","nrknqbbr","nrknqrbb","bbnrknrq","bnrbknrq","bnrknbrq","bnrknrqb","nbbrknrq","nrbbknrq","nrbknbrq","nrbknrqb","nbrkbnrq","nrkbbnrq","nrknbbrq","nrknbrqb","nbrknrbq","nrkbnrbq","nrknrbbq","nrknrqbb","bbqnrkrn","bqnbrkrn","bqnrkbrn","bqnrkrnb","qbbnrkrn","qnbbrkrn","qnbrkbrn","qnbrkrnb","qbnrbkrn","qnrbbkrn","qnrkbbrn","qnrkbrnb","qbnrkrbn","qnrbkrbn","qnrkrbbn","qnrkrnbb","bbnqrkrn","bnqbrkrn","bnqrkbrn","bnqrkrnb","nbbqrkrn","nqbbrkrn","nqbrkbrn","nqbrkrnb","nbqrbkrn","nqrbbkrn","nqrkbbrn","nqrkbrnb","nbqrkrbn","nqrbkrbn","nqrkrbbn","nqrkrnbb","bbnrqkrn","bnrbqkrn","bnrqkbrn","bnrqkrnb","nbbrqkrn","nrbbqkrn","nrbqkbrn","nrbqkrnb","nbrqbkrn","nrqbbkrn","nrqkbbrn","nrqkbrnb","nbrqkrbn","nrqbkrbn","nrqkrbbn","nrqkrnbb","bbnrkqrn","bnrbkqrn","bnrkqbrn","bnrkqrnb","nbbrkqrn","nrbbkqrn","nrbkqbrn","nrbkqrnb","nbrkbqrn","nrkbbqrn","nrkqbbrn","nrkqbrnb","nbrkqrbn","nrkbqrbn","nrkqrbbn","nrkqrnbb","bbnrkrqn","bnrbkrqn","bnrkrbqn","bnrkrqnb","nbbrkrqn","nrbbkrqn","nrbkrbqn","nrbkrqnb","nbrkbrqn","nrkbbrqn","nrkrbbqn","nrkrbqnb","nbrkrqbn","nrkbrqbn","nrkrqbbn","nrkrqnbb","bbnrkrnq","bnrbkrnq","bnrkrbnq","bnrkrnqb","nbbrkrnq","nrbbkrnq","nrbkrbnq","nrbkrnqb","nbrkbrnq","nrkbbrnq","nrkrbbnq","nrkrbnqb","nbrkrnbq","nrkbrnbq","nrkrnbbq","nrkrnqbb","bbqrnnkr","bqrbnnkr","bqrnnbkr","bqrnnkrb","qbbrnnkr","qrbbnnkr","qrbnnbkr","qrbnnkrb","qbrnbnkr","qrnbbnkr","qrnnbbkr","qrnnbkrb","qbrnnkbr","qrnbnkbr","qrnnkbbr","qrnnkrbb","bbrqnnkr","brqbnnkr","brqnnbkr","brqnnkrb","rbbqnnkr","rqbbnnkr","rqbnnbkr","rqbnnkrb","rbqnbnkr","rqnbbnkr","rqnnbbkr","rqnnbkrb","rbqnnkbr","rqnbnkbr","rqnnkbbr","rqnnkrbb","bbrnqnkr","brnbqnkr","brnqnbkr","brnqnkrb","rbbnqnkr","rnbbqnkr","rnbqnbkr","rnbqnkrb","rbnqbnkr","rnqbbnkr","rnqnbbkr","rnqnbkrb","rbnqnkbr","rnqbnkbr","rnqnkbbr","rnqnkrbb","bbrnnqkr","brnbnqkr","brnnqbkr","brnnqkrb","rbbnnqkr","rnbbnqkr","rnbnqbkr","rnbnqkrb","rbnnbqkr","rnnbbqkr","rnnqbbkr","rnnqbkrb","rbnnqkbr","rnnbqkbr","rnnqkbbr","rnnqkrbb","bbrnnkqr","brnbnkqr","brnnkbqr","brnnkqrb","rbbnnkqr","rnbbnkqr","rnbnkbqr","rnbnkqrb","rbnnbkqr","rnnbbkqr","rnnkbbqr","rnnkbqrb","rbnnkqbr","rnnbkqbr","rnnkqbbr","rnnkqrbb","bbrnnkrq","brnbnkrq","brnnkbrq","brnnkrqb","rbbnnkrq","rnbbnkrq","rnbnkbrq","rnbnkrqb","rbnnbkrq","rnnbbkrq","rnnkbbrq","rnnkbrqb","rbnnkrbq","rnnbkrbq","rnnkrbbq","rnnkrqbb","bbqrnknr","bqrbnknr","bqrnkbnr","bqrnknrb","qbbrnknr","qrbbnknr","qrbnkbnr","qrbnknrb","qbrnbknr","qrnbbknr","qrnkbbnr","qrnkbnrb","qbrnknbr","qrnbknbr","qrnknbbr","qrnknrbb","bbrqnknr","brqbnknr","brqnkbnr","brqnknrb","rbbqnknr","rqbbnknr","rqbnkbnr","rqbnknrb","rbqnbknr","rqnbbknr","rqnkbbnr","rqnkbnrb","rbqnknbr","rqnbknbr","rqnknbbr","rqnknrbb","bbrnqknr","brnbqknr","brnqkbnr","brnqknrb","rbbnqknr","rnbbqknr","rnbqkbnr","rnbqknrb","rbnqbknr","rnqbbknr","rnqkbbnr","rnqkbnrb","rbnqknbr","rnqbknbr","rnqknbbr","rnqknrbb","bbrnkqnr","brnbkqnr","brnkqbnr","brnkqnrb","rbbnkqnr","rnbbkqnr","rnbkqbnr","rnbkqnrb","rbnkbqnr","rnkbbqnr","rnkqbbnr","rnkqbnrb","rbnkqnbr","rnkbqnbr","rnkqnbbr","rnkqnrbb","bbrnknqr","brnbknqr","brnknbqr","brnknqrb","rbbnknqr","rnbbknqr","rnbknbqr","rnbknqrb","rbnkbnqr","rnkbbnqr","rnknbbqr","rnknbqrb","rbnknqbr","rnkbnqbr","rnknqbbr","rnknqrbb","bbrnknrq","brnbknrq","brnknbrq","brnknrqb","rbbnknrq","rnbbknrq","rnbknbrq","rnbknrqb","rbnkbnrq","rnkbbnrq","rnknbbrq","rnknbrqb","rbnknrbq","rnkbnrbq","rnknrbbq","rnknrqbb","bbqrnkrn","bqrbnkrn","bqrnkbrn","bqrnkrnb","qbbrnkrn","qrbbnkrn","qrbnkbrn","qrbnkrnb","qbrnbkrn","qrnbbkrn","qrnkbbrn","qrnkbrnb","qbrnkrbn","qrnbkrbn","qrnkrbbn","qrnkrnbb","bbrqnkrn","brqbnkrn","brqnkbrn","brqnkrnb","rbbqnkrn","rqbbnkrn","rqbnkbrn","rqbnkrnb","rbqnbkrn","rqnbbkrn","rqnkbbrn","rqnkbrnb","rbqnkrbn","rqnbkrbn","rqnkrbbn","rqnkrnbb","bbrnqkrn","brnbqkrn","brnqkbrn","brnqkrnb","rbbnqkrn","rnbbqkrn","rnbqkbrn","rnbqkrnb","rbnqbkrn","rnqbbkrn","rnqkbbrn","rnqkbrnb","rbnqkrbn","rnqbkrbn","rnqkrbbn","rnqkrnbb","bbrnkqrn","brnbkqrn","brnkqbrn","brnkqrnb","rbbnkqrn","rnbbkqrn","rnbkqbrn","rnbkqrnb","rbnkbqrn","rnkbbqrn","rnkqbbrn","rnkqbrnb","rbnkqrbn","rnkbqrbn","rnkqrbbn","rnkqrnbb","bbrnkrqn","brnbkrqn","brnkrbqn","brnkrqnb","rbbnkrqn","rnbbkrqn","rnbkrbqn","rnbkrqnb","rbnkbrqn","rnkbbrqn","rnkrbbqn","rnkrbqnb","rbnkrqbn","rnkbrqbn","rnkrqbbn","rnkrqnbb","bbrnkrnq","brnbkrnq","brnkrbnq","brnkrnqb","rbbnkrnq","rnbbkrnq","rnbkrbnq","rnbkrnqb","rbnkbrnq","rnkbbrnq","rnkrbbnq","rnkrbnqb","rbnkrnbq","rnkbrnbq","rnkrnbbq","rnkrnqbb","bbqrknnr","bqrbknnr","bqrknbnr","bqrknnrb","qbbrknnr","qrbbknnr","qrbknbnr","qrbknnrb","qbrkbnnr","qrkbbnnr","qrknbbnr","qrknbnrb","qbrknnbr","qrkbnnbr","qrknnbbr","qrknnrbb","bbrqknnr","brqbknnr","brqknbnr","brqknnrb","rbbqknnr","rqbbknnr","rqbknbnr","rqbknnrb","rbqkbnnr","rqkbbnnr","rqknbbnr","rqknbnrb","rbqknnbr","rqkbnnbr","rqknnbbr","rqknnrbb","bbrkqnnr","brkbqnnr","brkqnbnr","brkqnnrb","rbbkqnnr","rkbbqnnr","rkbqnbnr","rkbqnnrb","rbkqbnnr","rkqbbnnr","rkqnbbnr","rkqnbnrb","rbkqnnbr","rkqbnnbr","rkqnnbbr","rkqnnrbb","bbrknqnr","brkbnqnr","brknqbnr","brknqnrb","rbbknqnr","rkbbnqnr","rkbnqbnr","rkbnqnrb","rbknbqnr","rknbbqnr","rknqbbnr","rknqbnrb","rbknqnbr","rknbqnbr","rknqnbbr","rknqnrbb","bbrknnqr","brkbnnqr","brknnbqr","brknnqrb","rbbknnqr","rkbbnnqr","rkbnnbqr","rkbnnqrb","rbknbnqr","rknbbnqr","rknnbbqr","rknnbqrb","rbknnqbr","rknbnqbr","rknnqbbr","rknnqrbb","bbrknnrq","brkbnnrq","brknnbrq","brknnrqb","rbbknnrq","rkbbnnrq","rkbnnbrq","rkbnnrqb","rbknbnrq","rknbbnrq","rknnbbrq","rknnbrqb","rbknnrbq","rknbnrbq","rknnrbbq","rknnrqbb","bbqrknrn","bqrbknrn","bqrknbrn","bqrknrnb","qbbrknrn","qrbbknrn","qrbknbrn","qrbknrnb","qbrkbnrn","qrkbbnrn","qrknbbrn","qrknbrnb","qbrknrbn","qrkbnrbn","qrknrbbn","qrknrnbb","bbrqknrn","brqbknrn","brqknbrn","brqknrnb","rbbqknrn","rqbbknrn","rqbknbrn","rqbknrnb","rbqkbnrn","rqkbbnrn","rqknbbrn","rqknbrnb","rbqknrbn","rqkbnrbn","rqknrbbn","rqknrnbb","bbrkqnrn","brkbqnrn","brkqnbrn","brkqnrnb","rbbkqnrn","rkbbqnrn","rkbqnbrn","rkbqnrnb","rbkqbnrn","rkqbbnrn","rkqnbbrn","rkqnbrnb","rbkqnrbn","rkqbnrbn","rkqnrbbn","rkqnrnbb","bbrknqrn","brkbnqrn","brknqbrn","brknqrnb","rbbknqrn","rkbbnqrn","rkbnqbrn","rkbnqrnb","rbknbqrn","rknbbqrn","rknqbbrn","rknqbrnb","rbknqrbn","rknbqrbn","rknqrbbn","rknqrnbb","bbrknrqn","brkbnrqn","brknrbqn","brknrqnb","rbbknrqn","rkbbnrqn","rkbnrbqn","rkbnrqnb","rbknbrqn","rknbbrqn","rknrbbqn","rknrbqnb","rbknrqbn","rknbrqbn","rknrqbbn","rknrqnbb","bbrknrnq","brkbnrnq","brknrbnq","brknrnqb","rbbknrnq","rkbbnrnq","rkbnrbnq","rkbnrnqb","rbknbrnq","rknbbrnq","rknrbbnq","rknrbnqb","rbknrnbq","rknbrnbq","rknrnbbq","rknrnqbb","bbqrkrnn","bqrbkrnn","bqrkrbnn","bqrkrnnb","qbbrkrnn","qrbbkrnn","qrbkrbnn","qrbkrnnb","qbrkbrnn","qrkbbrnn","qrkrbbnn","qrkrbnnb","qbrkrnbn","qrkbrnbn","qrkrnbbn","qrkrnnbb","bbrqkrnn","brqbkrnn","brqkrbnn","brqkrnnb","rbbqkrnn","rqbbkrnn","rqbkrbnn","rqbkrnnb","rbqkbrnn","rqkbbrnn","rqkrbbnn","rqkrbnnb","rbqkrnbn","rqkbrnbn","rqkrnbbn","rqkrnnbb","bbrkqrnn","brkbqrnn","brkqrbnn","brkqrnnb","rbbkqrnn","rkbbqrnn","rkbqrbnn","rkbqrnnb","rbkqbrnn","rkqbbrnn","rkqrbbnn","rkqrbnnb","rbkqrnbn","rkqbrnbn","rkqrnbbn","rkqrnnbb","bbrkrqnn","brkbrqnn","brkrqbnn","brkrqnnb","rbbkrqnn","rkbbrqnn","rkbrqbnn","rkbrqnnb","rbkrbqnn","rkrbbqnn","rkrqbbnn","rkrqbnnb","rbkrqnbn","rkrbqnbn","rkrqnbbn","rkrqnnbb","bbrkrnqn","brkbrnqn","brkrnbqn","brkrnqnb","rbbkrnqn","rkbbrnqn","rkbrnbqn","rkbrnqnb","rbkrbnqn","rkrbbnqn","rkrnbbqn","rkrnbqnb","rbkrnqbn","rkrbnqbn","rkrnqbbn","rkrnqnbb","bbrkrnnq","brkbrnnq","brkrnbnq","brkrnnqb","rbbkrnnq","rkbbrnnq","rkbrnbnq","rkbrnnqb","rbkrbnnq","rkrbbnnq","rkrnbbnq","rkrnbnqb","rbkrnnbq","rkrbnnbq","rkrnnbbq","rkrnnqbb"];
+      }
+      var str = "";
+      var ep = -10;
+      var variant = 0;
+      const height = window.innerHeight;
+      const width = window.innerWidth;
+      const base = Math.min(height, width);
+      for (let i = 0; i < 64; i++){
+        str += `${i % 8 == 0 ? "<tr>" : ""}<td id="t${i}" class="${(i + Math.floor(i / 8)) % 2 ? "dark" : "light"}" width="${base/10}px" height="${base/10}px"></td>${i % 8 == 7 ? "</tr>" : ""}`;
+      }
+      $("#table").innerHTML = str;
+      const pieces = {
+        white: "RNBQKP".split``,
+        black: "rnbqkp".split``
+      };
+      const orth = "RQ".split``;
+      const diag = "BQ".split``;
+      const alph = "abcdefgh".split``;
+      const prom = "RNBQK".split``;
+      const rand = l => l[Math.floor(Math.random() * l.length)];
+      const randint = max => Math.floor(Math.random() * (max + 1));
+      function randomName(){
+        let freq = [0, 0];
+        var fullName = [];
+        const vowels = 'aeiouy';
+        const consonants = 'bcdfghjklmnpqrstvwxyz';
+        var name = '';
+        for (let i = 0; i < randint(2)+1; i++){
+          name = '';
+          for (let n = 0; n < randint(12)+3; n++){
+            let r = randint(26);
+            if (r > 5){
+              if (freq[1] == 2){
+                name += vowels[randint(5)];
+                freq = [1, 0];
+              }else{
+                name += consonants[r - 6];
+                freq[1]++;
+                freq[0] = 0;
+              }
+            }else{
+              if (freq[0] == 2){
+                name += consonants[randint(20)];
+                freq = [0, 1];
+              }else{
+                name += vowels[r];
+                freq[0]++;
+                freq[1] = 0;
+              }
+            }
+            if (!n) name = name.toUpperCase();
+          }
+          fullName.push(name);
+        }
+        return fullName.join` `;
+      }
+      function randomDate(){
+        let year = String(randint(522)+1500);
+        let month = String(randint(11)+1);
+        if (+month < 10) month = '0'+month;
+        var lim = 0;
+        switch(month){
+          case 1: case 3: case 5: case 7: case 8: case 10: case 12:
+            lim = 31;
+            break;
+          case 4: case 6: case 9: case 11:
+            lim = 30;
+            break;
+          default:
+            if ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0){
+              lim = 29;
+            }else{
+              lim = 28;
+            }
+        }
+        let date = String(randint(lim-1)+1);
+        if (+date < 10) date = '0'+date;
+        return year+'.'+month+'.'+date;
+      }
+      //Show initial position in board
+      var board = "rnbqkbnrpppppppp________________________________PPPPPPPPRNBQKBNR";
+      for (let t in board){
+        let o = board[t].toLowerCase();
+        //let h = (o == "r" || o == "b" || o == "n" ? 0.8 : o == "k" || o == "q" ? 1 : o == "p" ? 0.6 : 0);
+        $(`#t${t}`).innerHTML = (board[t] != "_" ? `<img src="${imageify(board[t])}.svg" height="${base/10}px">` : "");
+      }
+      
+      // For castling
+      function allClear(min, max, king, kingAC, kq){
+        let add = whiteToMove ? 56 : 0;
+        for (let i = min; i <= max; i++){
+          if (board[i] != "_" && i != (kk + add) && i != (kq ? (qr+add) :(kr+add))) return false;
+        }
+        for (let i = Math.min(king, kingAC); i <= Math.max(king, kingAC); i++){
+          if (kingInDanger(movePiece([king, i], board), whiteToMove)) return false;
+        }
+        return true;
+      }
+      function adjacent(sq){
+        let s = rowcol(sq);
+        if (s.row == 0){
+          if (s.col == 0){
+            return [sq+1, sq+8, sq+9];
+          }else if (s.col == 7){
+            return [sq-1, sq+7, sq+8];
+          }else{
+            return [sq-1, sq+1, sq+7, sq+8, sq+9];
+          }
+        }else if(s.row == 7){
+          if (s.col == 0){
+            return [sq+1, sq-8, sq-7];
+          }else if (s.col == 7){
+            return [sq-1, sq-9, sq-8];
+          }else{
+            return [sq-1, sq+1, sq-7, sq-8, sq-9];
+          }
+        }else{
+          if (s.col == 0){
+            return [sq-8, sq-7, sq+1, sq+8, sq+9];
+          }else if (s.col == 7){
+            return [sq-9, sq-8, sq-1, sq+7, sq+8];
+          }else{
+            return [sq-7, sq-8, sq-9, sq-1, sq+1, sq+7, sq+8, sq+9];
+          }
+        }
+      }
+      function humanize(move, b, moves){
+        var s = "";
+        if (move[0] == 0 && move[1] == 0){
+          s = "O-O";
+        }else if (move[0] == 1 && move[1] == 1){
+          s = "O-O-O";
+        }else{
+          if (move[0] < 64){
+            s = b[move[0]].toUpperCase(); // P, R, N, B, Q, K
+          }
+          // var isWhite = pieces.white.includes(b[move[0]])
+          s == "P" ? s = "" : 0;
+          // Add diambiguation, begin with abcdefgh
+          //console.log(moves.length);
+          var same = [];
+          for (let a of moves){
+            if (a[1] == move[1] && b[a[0]] == b[move[0]] && s != ""){
+              same.push(a[0]);
+            }
+          }
+          //console.log(same.length > 0 ? " Hauah:÷-÷-@÷-÷@-÷@;÷@;÷@+÷@;iaguah" : "");
+          var sims = {
+            col: false,
+            row: false
+          };
+          for (let p of same){
+            if (rowcol(p).col == rowcol(move[0]).col){
+              sims.col = true;
+            }
+            if (rowcol(p).row == rowcol(move[0]).row){
+              sims.row = true;
+            }
+          }
+          s += (b[move[1]] != "_" && s == "" ? alph[rowcol(move[0]).col] : "");
+          if (sims.row){
+            s += alph[rowcol(move[0]).col];
+          }
+          if (sims.col){
+            s += (8 - rowcol(move[0]).row);
+          }else if (!sims.row && s != "" && same.length > 0){
+            s += alph[rowcol(move[0]).col];
+          }
+          s += (b[move[1]] == "_" ? "" : "x");
+          // Crazyhouse
+          if (b[move[1]] != "_"){
+            if (promoted.includes(move[1])){
+              if (whiteToMove){
+                wpocket.push("p");
+              }else{
+                bpocket.push("P");
+              }
+              promoted.splice(promoted.indexOf(move[1]), 1);
+            }else{
+              if (whiteToMove){
+                wpocket.push(b[move[1]]);
+              }else{
+                bpocket.push(b[move[1]]);
+              }
+            }
+          }
+          if (move[0] > 63){
+            if (whiteToMove){
+              s = wpocket[move[0]-64].toUpperCase() + "@";
+            }else{
+              s = bpocket[move[0]-64].toUpperCase() + "@";
+            }
+            s = s.replace("P", "");
+          }
+          // Back.
+          s += alph[rowcol(move[1]).col] + (8 - rowcol(move[1]).row);
+          if (move.length == 3 && rowcol(move[1]).row == (b[move[0]] == "P" ? 0 : 7)){
+            s += `=${prom[move[2]]}`;
+          }
+        }
+        if (move.includes("ep")){
+          s = `${alph[rowcol(move[0]).col]}x${alph[rowcol(move[1]).col]}${8-rowcol(move[1]).row}`;
+        }
+        s += (kingInDanger(movePiece(move, b), !whiteToMove) && variant != 5) ? "+" : "";
+        //console.log(whiteToMove);
+        //same.length > 0 ? console.log(s, sims) : 0;
+        return s;
+      }
+      function movePiece(move, bo){
+        //console.log(variant);
+        var b = [];
+        for (let p of bo){
+          b.push(p)
+        }
+        if (variant == 6 && b[move[1]] != "_"){
+          b[move[0]] = "_";
+          b[move[1]] = "_";
+          for (let square of adjacent(move[1])){
+            if (b[square].toLowerCase() != "p") b[square] = "_";
+            if (square == 0){
+              bqr = true;
+            }else if (square == 7){
+              bkr = true;
+            }else if (square == 56){
+              wqr = true;
+            }else if (square == 63){
+              wkr = true;
+            }
+          }
+          return b;
+        }
+        if (variant != 2){
+        if (move[0] == 0 && move[1] == 0){
+          if (whiteToMove){
+            b[60] = "_";
+            b[61] = "R";
+            b[62] = "K";
+            b[63] = "_";
+          }else{
+            b[4] = "_";
+            b[5] = "r";
+            b[6] = "k";
+            b[7] = "_";
+          }
+          return b;
+        }else if (move[0] == 1 && move[1] == 1){
+          if (whiteToMove){
+            b[56] = "_";
+            b[57] = "_";
+            b[58] = "K";
+            b[59] = "R";
+            b[60] = "_";
+          }else{
+            b[0] = "_";
+            b[1] = "_";
+            b[2] = "k";
+            b[3] = "r";
+            b[4] = "_";
+          }
+          return b;
+          }
+          }else{
+            let add = whiteToMove ? 56 : 0;
+            let king = whiteToMove ? "K" : "k";
+            let rook = whiteToMove ? "R" : "r";
+            if (move[0] == 1 && move[1] == 1){
+              b[kk+add] = "_";
+              b[qr+add] = "_";
+              b[2+add] = king;
+              b[3+add] = rook;
+              return b;
+            }
+            if (move[0] == 0 && move[1] == 0){
+              b[kk+add] = "_";
+              b[kr+add] = "_";
+              b[6+add] = king;
+              b[5+add] = rook;
+              return b;
+            }
+        }
+        //console.log("called")
+        //Crazyhouse
+        if (move[0] > 63){
+          if (whiteToMove){
+            b[move[1]] = wpocket[move[0]-64].toUpperCase();
+          }else{
+            b[move[1]] = bpocket[move[0]-64].toLowerCase();
+          }
+        }else{
+          b[move[1]] = b[move[0]];
+        }
+        b[move[0]] = "_";
+        if (move.includes("ep")){
+          // En passant!
+          b[move[1] + (whiteToMove ? 8 : -8)] = "_";
+        }
+        if (move.length == 3 && rowcol(move[1]).row == (b[move[1]] == "P" ? 0 : 7)){
+          b[move[1]] = (b[move[1]] == "p" ? prom[move[2]].toLowerCase() : prom[move[2]]);
+        }
+        return b;
+      }
+      function rowcol(index){
+        return {
+          row: parseInt(index / 8),
+          col: index % 8
+        }; // Rows 0...7 (a-h files)
+      }
+      function imageify(p){
+        return (p==p.toLowerCase()?"b":"w")+p.toUpperCase();
+      }
+      function kingInDanger(b,isWhite){
+        if (variant == 6){
+          let king = isWhite ? "K" : "k"
+          if (b.indexOf(king) == -1) return true;
+          let oppKing = isWhite ? "k" : "K";
+          if (b.indexOf(oppKing) == -1) return false;
+          for (let square of adjacent(b.indexOf(king))){
+            if (b[square] == oppKing){
+              return false;
+            }
+          }
+        }
+        if (variant == 7 && isWhite) return false;
+        var pcs = isWhite ? pieces.black : pieces.white;
+        var tile = 0;
+        for (let i in b){
+          if (b[i] == (isWhite ? "K" : "k")){
+            tile = parseInt(i);
+            break;
+          }
+        }
+        var row = rowcol(tile).row;
+        var col = rowcol(tile).col;
+        //console.log(rowcol(tile));
+        // To the king's right
+        for (let r = col+1; r < 8; r++){
+          var newTile = b[row * 8 + r];
+          if (pcs.includes(newTile) && orth.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        // To the king's left
+        for (let r = col-1; r >= 0; r--){
+          var newTile = b[row * 8 + r];
+          if (pcs.includes(newTile) && orth.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        // To the king's front
+        for (let r = row-1; r >= 0; r--){
+          var newTile = b[r * 8 + col];
+          if (pcs.includes(newTile) && orth.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        // To the king's back
+        for (let r = row+1; r < 8; r++){
+          var newTile = b[r * 8 + col];
+          if (pcs.includes(newTile) && orth.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        // DIAGONALS
+        for (let r = 1; r <= Math.min(row, col); r++){
+          var newTile = b[tile - (9 * r)];
+          if (pcs.includes(newTile) && diag.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        for (let r = 1; r <= Math.min(row, 7 - col); r++){
+          var newTile = b[tile - (7 * r)];
+          if (pcs.includes(newTile) && diag.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        for (let r = 1; r <= Math.min(7 - row, 7 - col); r++){
+          var newTile = b[tile + (9 * r)];
+          if (pcs.includes(newTile) && diag.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        for (let r = 1; r <= Math.min(7 - row, col); r++){
+          var newTile = b[tile + (7 * r)];
+          if (pcs.includes(newTile) && diag.includes(newTile.toUpperCase())){
+            return true;
+          }else if (newTile != "_"){
+            break;
+          }
+        }
+        // KNIGHTS
+        var knights = [];
+        if (row > 1){
+          if (col > 1){
+            knights.push(-10);
+            knights.push(-17);
+          }
+          if (col < 6){
+            knights.push(-6);
+            knights.push(-15);
+          }
+          if (col == 1){
+            knights.push(-17);
+          }
+          if (col == 6){
+            knights.push(-15);
+          }
+        }
+        if (row < 6){
+          if (col > 1){
+            knights.push(6);
+            knights.push(15);
+          }
+          if (col < 6){
+            knights.push(10);
+            knights.push(17);
+          }
+          if (col == 1){
+            knights.push(15);
+          }
+          if (col == 6){
+            knights.push(17);
+          }
+        }
+        if (row == 1){
+          if (col > 1){
+            knights.push(-10);
+          }
+          if (col < 6){
+            knights.push(-6);
+          }
+        }
+        if (row == 6){
+          if (col > 1){
+            knights.push(6);
+          }
+          if (col < 6){
+            knights.push(10);
+          }
+        }
+        for (let c of knights){
+          if (pcs.includes(b[tile + c]) && b[tile + c].toUpperCase() == "N"){
+            return true;
+          }
+        }
+        // PAWNS
+        var pawns = [];
+        if (isWhite && row > 1){
+          if (col > 0){
+            pawns.push(-9);
+          }
+          if (col < 7){
+            pawns.push(-7);
+          }
+        }
+        if (!isWhite && row < 7){
+          if (col > 0){
+            pawns.push(7);
+          }
+          if (col < 7){
+            pawns.push(9);
+          }
+        }
+        for (let c of pawns){
+          if (pcs.includes(b[tile + c]) && b[tile + c].toUpperCase() == "P"){
+            return true;
+          }
+        }
+        var kingMoves = [];
+        if (row < 7 && row > 0){
+          if (col < 7 && col > 0){
+            kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
+          }else if (col == 7){
+            kingMoves = [-9, -8, -1, 7, 8];
+          }else{
+            kingMoves = [-8, -7, 1, 8, 9];
+          }
+        }else if (row == 7){
+          if (col < 7 && col > 0){
+            kingMoves = [-9, -8, -7, -1, 1];
+          }else if (col == 7){
+            kingMoves = [-9, -8, -1];
+          }else{
+            kingMoves = [-8, -7, 1];
+          }
+        }else{
+          if (col < 7 && col > 0){
+            kingMoves = [-1, 1, 7, 8, 9];
+          }else if (col == 7){
+            kingMoves = [-1, 7, 8];
+          }else{
+            kingMoves = [1, 8, 9];
+          }
+        }
+        for (let k of kingMoves){
+          if (pcs.includes(b[tile + k]) && b[tile + k].toUpperCase() == "K"){
+            return true;
+          }
+        }
+        // THAT'S IT!
+        return false;
+      }
+      function generate(){
+        $("#copy").style.display = "block";
+        $("#copy").innerHTML = "Copy text (only works for desktop)";
+        $("#copy").style.backgroundColor = "#888888";
+        var bk = bqr = bkr = wk = wqr = wkr = false;
+        var str = "";
+        whiteToMove = true;
+        var opp = pieces.black;
+        var slf = pieces.white;
+        var temp = pieces.black;
+        wchecks = 0;
+        bchecks = 0;
+        var moves = [];
+        ep = -10; // Storing what lanes can be en-passanted
+        var moveCount = 0;
+        var v = 0;
+        rf = false;
+        board = "rnbqkbnrpppppppp________________________________PPPPPPPPRNBQKBNR";//.split``;
+        //var board = "_____________________________________p______________P___________";
+        variant = $("#variant").selectedIndex;
+        console.log(variant);
+        if (variant > 0){
+          str = `[Variant "${["Standard", "Crazyhouse", "Chess960", "King of the Hill", "Three-check", "Antichess", "Atomic", "Horde", "Racing Kings"][variant]}"]<br>`;
+        }
+        if (variant == 2){
+          sp = rand(chess960);
+          //sp = "nbqrkrbn";
+          board = `${sp}pppppppp________________________________PPPPPPPP${sp.toUpperCase()}`;
+          console.log(sp);
+          str += `[FEN "${sp}/pppppppp/8/8/8/8/PPPPPPPP/${sp.toUpperCase()} w KQkq"]<br>`;
+          qr = sp.indexOf("r");
+          kr = sp.lastIndexOf("r");
+          kk = sp.indexOf("k");
+        }
+        if (variant == 7){
+          board = "rnbqkbnrpppppppp_________PP__PP_PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP";
+        }
+        if (variant == 8){
+          board = "________________________________________________krbnNBRKqrbnNBRQ";
+        }
+        promoted = [];
+        // 0 Standard, 1 Crazyhouse, 2 Chess960, 3 King of the Hill, 4 Three-check, 5 Antichess, 6 Atomic, 7 Horde, 8 Racing Kings
+        // IDEA: Loop through each piece in board, iterate through all moves, append to list if move is legal
+        // Store board in a 64-char string/array
+        /*************
+        STANDARD CHESS
+        *************/
+        // Store moves like [63, 0] meaning board[63] goes to board[0]
+        // Castling: [0,0] for kingside and [1,1] for queenside, check if castling possible for each turn
+        //EN PASSANT: 3rd element exists
+        wpocket = [];
+        bpocket = [];
+        /*********
+        CRAZYHOUSE
+        *********/
+        // Append all possible drops, and special case for pawn drops.
+        // Same way to store moves, but [64, 45] means drop piece in pocket[0] to board[45]. Check if index 0 larger than 63.
+        while (true){
+          // Loops until game ends
+          moves = [];
+          for (let i in board){
+            i = +i;
+            // Loop through tiles in board
+            var row = rowcol(i).row;
+            var col = rowcol(i).col;
+            if (whiteToMove && pieces.white.includes(board[i])){
+              switch(board[i]){
+                // case R, B, N, Q, K, P
+                case "P":
+                  if (board[i - 8] == "_"){
+                    if (row == 1){
+                      for (let t = 0; t < (variant == 5 ? 5 : 4); t++){
+                        moves.push([i, i - 8, t]);
+                      }
+                    }else{
+                      moves.push([i, i - 8]);
+                    }
+                  }
+                  if (opp.includes(board[i - 7]) && col != 7){
+                    if (row == 1){
+                      for (let t = 0; t < 4; t++){
+                        moves.push([i, i - 7, t]);
+                      }
+                    }else{
+                      moves.push([i, i - 7]);
+                    }
+                  }
+                  if (opp.includes(board[i - 9]) && col != 0){
+                    if (row == 1){
+                      for (let t = 0; t < 4; t++){
+                        moves.push([i, i - 9, t]);
+                      }
+                    }else{
+                      moves.push([i, i - 9]);
+                    }
+                  }
+                  if ((row == 6 || row == 7) && board[i - 16] == "_" && board[i - 8] == "_"){
+                    moves.push([i, i - 16, "EP"]); // EP for en-passantable
+                  }
+                  if (row == 3 && Math.abs(col - ep) == 1){ // EN PASSANT!
+                    moves.push([i, 16 + ep, "ep"]); // Third element to easily tell that this is en-passant
+                  }
+                  break;
+                case "Q":
+                  for (let r = 1; r <= Math.min(row, col); r++){
+                    if (slf.includes(board[i - (r * 9)])){
+                      break;
+                    }else if (i - (r * 9) >= 0){
+                      moves.push([i, i - (r * 9)]);
+                    }
+                    if (opp.includes(board[i - (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(row, 7 - col); r++){
+                    if (slf.includes(board[i - (r * 7)])){
+                      break;
+                    }else if (i - (r * 7) >= 0){
+                      moves.push([i, i - (r * 7)]);
+                    }
+                    if (opp.includes(board[i - (r * 7)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, 7 - col); r++){
+                    if (slf.includes(board[i + (r * 9)])){
+                      break;
+                    }else if (i + (r * 9) < 64){
+                      moves.push([i, i + (r * 9)]);
+                    }
+                    if (opp.includes(board[i + (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, col); r++){
+                    if (slf.includes(board[i + (r * 7)])){
+                      break;
+                    }else if (i + (r * 7) < 64){
+                      moves.push([i, i + (r * 7)]);
+                    }
+                    if (opp.includes(board[i + (r * 7)])){
+                      break;
+                    }
+                  }
+                case "R":
+                  // Right
+                  for (let r = col+1; r < 8; r++){
+                    if (!slf.includes(board[row * 8 + r])){
+                      moves.push([i, row * 8 + r]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[row * 8 + r])){
+                      break;
+                    }
+                  }
+                  // Left
+                  for (let r = col-1; r >= 0; r--){
+                    if (!slf.includes(board[row * 8 + r])){
+                      moves.push([i, row * 8 + r]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[row * 8 + r])){
+                      break;
+                    }
+                  }
+                  // Front
+                  for (let r = row-1; r >= 0; r--){
+                    if (!slf.includes(board[r * 8 + col])){
+                      moves.push([i, r * 8 + col]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[r * 8 + col])){
+                      break;
+                    }
+                  }
+                  // Back
+                  for (let r = row+1; r < 8; r++){
+                    if (!slf.includes(board[r * 8 + col])){
+                      moves.push([i, r * 8 + col]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[r * 8 + col])){
+                      break;
+                    }
+                  }
+                  break;
+                case "N":
+                  var knights = [];
+                  if (row > 1){
+                    if (col > 1){
+                      knights.push(-10);
+                      knights.push(-17);
+                    }
+                    if (col < 6){
+                      knights.push(-6);
+                      knights.push(-15);
+                    }
+                    if (col == 1){
+                      knights.push(-17);
+                    }
+                    if (col == 6){
+                      knights.push(-15);
+                    }
+                  }
+                  if (row < 6){
+                    if (col > 1){
+                      knights.push(6);
+                      knights.push(15);
+                    }
+                    if (col < 6){
+                      knights.push(10);
+                      knights.push(17);
+                    }
+                    if (col == 1){
+                      knights.push(15);
+                    }
+                    if (col == 6){
+                      knights.push(17);
+                    }
+                  }
+                  if (row == 1){
+                    if (col > 1){
+                      knights.push(-10);
+                    }
+                    if (col < 6){
+                      knights.push(-6);
+                    }
+                  }
+                  if (row == 6){
+                    if (col > 1){
+                      knights.push(6);
+                    }
+                    if (col < 6){
+                      knights.push(10);
+                    }
+                  }
+                  for (let k of knights){
+                    if (!slf.includes(board[i + k])){ // If our own pieces aren't in that knight's range
+                      moves.push([i, i + k]);
+                    }
+                  }
+                  break;
+                case "B":
+                  for (let r = 1; r <= Math.min(row, col); r++){
+                    if (slf.includes(board[i - (r * 9)])){
+                      break;
+                    }else if (i - (r * 9) >= 0){
+                      moves.push([i, i - (r * 9)]);
+                    }
+                    if (opp.includes(board[i - (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(row, 7 - col); r++){
+                    if (slf.includes(board[i - (r * 7)])){
+                      break;
+                    }else if (i - (r * 7) >= 0){
+                      moves.push([i, i - (r * 7)]);
+                    }
+                    if (opp.includes(board[i - (r * 7)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, 7 - col); r++){
+                    if (slf.includes(board[i + (r * 9)])){
+                      break;
+                    }else if (i + (r * 9) < 64){
+                      moves.push([i, i + (r * 9)]);
+                    }
+                    if (opp.includes(board[i + (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, col); r++){
+                    if (slf.includes(board[i + (r * 7)])){
+                      break;
+                    }else if (i + (r * 7) < 64){
+                      moves.push([i, i + (r * 7)]);
+                    }
+                    if (opp.includes(board[i + (r * 7)])){
+                      break;
+                    }
+                  }
+                  break;
+                case "K":
+                  var kingMoves = [];
+                  if (row < 7 && row > 0){
+                    if (col < 7 && col > 0){
+                      kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
+                    }else if (col == 7){
+                      kingMoves = [-9, -8, -1, 7, 8];
+                    }else{
+                      kingMoves = [-8, -7, 1, 8, 9];
+                    }
+                  }else if (row == 7){
+                    if (col < 7 && col > 0){
+                      kingMoves = [-9, -8, -7, -1, 1];
+                    }else if (col == 7){
+                      kingMoves = [-9, -8, -1];
+                    }else{
+                      kingMoves = [-8, -7, 1];
+                    }
+                  }else{
+                    if (col < 7 && col > 0){
+                      kingMoves = [-1, 1, 7, 8, 9];
+                    }else if (col == 7){
+                      kingMoves = [-1, 7, 8];
+                    }else{
+                      kingMoves = [1, 8, 9];
+                    }
+                  }
+                  for (let m of kingMoves){
+                    if (!slf.includes(board[i + m])){
+                      moves.push([i, i + m]);
+                    }
+                  }
+                  break;
+              }
+            }else if (!whiteToMove && pieces.black.includes(board[i])){ // This is an extremely long and kind of unnecessary (is that the right pronounciation?) comment whose sole purpose is for me to find this bookmark easier. Good luck on finding this bookmark, me!
+              switch(board[i]){
+                // case R, B, N, Q, K, P
+                case "p":
+                  if (board[i + 8] == "_"){
+                    if (row == 6){
+                      for (let t = 0; t < (variant == 5 ? 5 : 4); t++){
+                        moves.push([i, i + 8, t]);
+                      }
+                    }else{
+                      moves.push([i, i + 8]);
+                    }
+                  }
+                  if (opp.includes(board[i + 7]) && col != 0){
+                    if (row == 6){
+                      for (let t = 0; t < 4; t++){
+                        moves.push([i, i + 7, t]);
+                      }
+                    }else{
+                      moves.push([i, i + 7]);
+                    }
+                  }
+                  if (opp.includes(board[i + 9]) && col != 7){
+                    if (row == 6){
+                      for (let t = 0; t < 4; t++){
+                        moves.push([i, i + 9, t]);
+                      }
+                    }else{
+                      moves.push([i, i + 9]);
+                    }
+                  }
+                  if (row == 1 && board[i + 16] == "_" && board[i + 8] == "_"){
+                    moves.push([i, i + 16, "EP"]);
+                  }
+                  if (row == 4 && Math.abs(col - ep) == 1){ // EN PASSANT!
+                    moves.push([i, 40 + ep, "ep"]); // Third element to easily tell that this is en-passant
+                  }
+                  break;
+                case "q":
+                  for (let r = 1; r <= Math.min(row, col); r++){
+                    if (slf.includes(board[i - (r * 9)])){
+                      break;
+                    }else if (i - (r * 9) >= 0){
+                      moves.push([i, i - (r * 9)]);
+                    }
+                    if (opp.includes(board[i - (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(row, 7 - col); r++){
+                    if (slf.includes(board[i - (r * 7)])){
+                      break;
+                    }else if (i - (r * 7) >= 0){
+                      moves.push([i, i - (r * 7)]);
+                    }
+                    if (opp.includes(board[i - (r * 7)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, 7 - col); r++){
+                    if (slf.includes(board[i + (r * 9)])){
+                      break;
+                    }else if (i + (r * 9) < 64){
+                      moves.push([i, i + (r * 9)]);
+                    }
+                    if (opp.includes(board[i + (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, col); r++){
+                    if (slf.includes(board[i + (r * 7)])){
+                      break;
+                    }else if (i + (r * 7) < 64){
+                      moves.push([i, i + (r * 7)]);
+                    }
+                    if (opp.includes(board[i + (r * 7)])){
+                      break;
+                    }
+                  }
+                case "r":
+                  // Right
+                  for (let r = col+1; r < 8; r++){
+                    if (!slf.includes(board[row * 8 + r])){
+                      moves.push([i, row * 8 + r]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[row * 8 + r])){
+                      break;
+                    }
+                  }
+                  // Left
+                  for (let r = col-1; r >= 0; r--){
+                    if (!slf.includes(board[row * 8 + r])){
+                      moves.push([i, row * 8 + r]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[row * 8 + r])){
+                      break;
+                    }
+                  }
+                  // Front
+                  for (let r = row-1; r >= 0; r--){
+                    if (!slf.includes(board[r * 8 + col])){
+                      moves.push([i, r * 8 + col]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[r * 8 + col])){
+                      break;
+                    }
+                  }
+                  // Back
+                  for (let r = row+1; r < 8; r++){
+                    if (!slf.includes(board[r * 8 + col])){
+                      moves.push([i, r * 8 + col]);
+                    }else{
+                      break;
+                    }
+                    if (opp.includes(board[r * 8 + col])){
+                      break;
+                    }
+                  }
+                  break;
+                case "n":
+                  var knights = [];
+                  if (row > 1){
+                    if (col > 1){
+                      knights.push(-10);
+                      knights.push(-17);
+                    }
+                    if (col < 6){
+                      knights.push(-6);
+                      knights.push(-15);
+                    }
+                    if (col == 1){
+                      knights.push(-17);
+                    }
+                    if (col == 6){
+                      knights.push(-15);
+                    }
+                  }
+                  if (row < 6){
+                    if (col > 1){
+                      knights.push(6);
+                      knights.push(15);
+                    }
+                    if (col < 6){
+                      knights.push(10);
+                      knights.push(17);
+                    }
+                    if (col == 1){
+                      knights.push(15);
+                    }
+                    if (col == 6){
+                      knights.push(17);
+                    }
+                  }
+                  if (row == 1){
+                    if (col > 1){
+                      knights.push(-10);
+                    }
+                    if (col < 6){
+                      knights.push(-6);
+                    }
+                  }
+                  if (row == 6){
+                    if (col > 1){
+                      knights.push(6);
+                    }
+                    if (col < 6){
+                      knights.push(10);
+                    }
+                  }
+                  for (let k of knights){
+                    if (!slf.includes(board[i + k])){ // If our own pieces aren't in that knight's range
+                      moves.push([i, i + k]);
+                    }
+                  }
+                  break;
+                case "b":
+                  for (let r = 1; r <= Math.min(row, col); r++){
+                    if (slf.includes(board[i - (r * 9)])){
+                      break;
+                    }else if (i - (r * 9) >= 0){
+                      moves.push([i, i - (r * 9)]);
+                    }
+                    if (opp.includes(board[i - (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(row, 7 - col); r++){
+                    if (slf.includes(board[i - (r * 7)])){
+                      break;
+                    }else if (i - (r * 7) >= 0){
+                      moves.push([i, i - (r * 7)]);
+                    }
+                    if (opp.includes(board[i - (r * 7)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, 7 - col); r++){
+                    if (slf.includes(board[i + (r * 9)])){
+                      break;
+                    }else if (i + (r * 9) < 64){
+                      moves.push([i, i + (r * 9)]);
+                    }
+                    if (opp.includes(board[i + (r * 9)])){
+                      break;
+                    }
+                  }
+                  for (let r = 1; r <= Math.min(7 - row, col); r++){
+                    if (slf.includes(board[i + (r * 7)])){
+                      break;
+                    }else if (i + (r * 7) < 64){
+                      moves.push([i, i + (r * 7)]);
+                    }
+                    if (opp.includes(board[i + (r * 7)])){
+                      break;
+                    }
+                  }
+                  break;
+                case "k":
+                  var kingMoves = [];
+                  if (row < 7 && row > 0){
+                    if (col < 7 && col > 0){
+                      kingMoves = [-9, -8, -7, -1, 1, 7, 8, 9];
+                    }else if (col == 7){
+                      kingMoves = [-9, -8, -1, 7, 8];
+                    }else{
+                      kingMoves = [-8, -7, 1, 8, 9];
+                    }
+                  }else if (row == 7){
+                    if (col < 7 && col > 0){
+                      kingMoves = [-9, -8, -7, -1, 1];
+                    }else if (col == 7){
+                      kingMoves = [-9, -8, -1];
+                    }else{
+                      kingMoves = [-8, -7, 1];
+                    }
+                  }else{
+                    if (col < 7 && col > 0){
+                      kingMoves = [-1, 1, 7, 8, 9];
+                    }else if (col == 7){
+                      kingMoves = [-1, 7, 8];
+                    }else{
+                      kingMoves = [1, 8, 9];
+                    }
+                  }
+                  for (let m of kingMoves){
+                    if (!slf.includes(board[i + m])){
+                      moves.push([i, i + m]);
+                    }
+                  }
+                  break;
+              }
+            }
+          }
+          //console.log(bk, bqr, bkr, wk, wqr, wkr)
+          //console.log(board)
+          //console.log(moves)
+          if (variant != 5 && variant != 2 && !(variant == 7 && whiteToMove) && variant != 8){ // Not antichess or Chess960 or Horde or Racing Kings
+            if (whiteToMove && !wk && !kingInDanger(board, true)){
+              if (!wkr && board[61] == "_" && board[62] == "_" && !kingInDanger(movePiece([60, 61], board), true)){
+                moves.push([0, 0]);
+              }
+              if (!wqr && board[57] == "_" && board[58] == "_" && board[59] == "_" && !kingInDanger(movePiece([60, 59], board), true)){
+                moves.push([1, 1]);
+              }
+            }
+            if (!whiteToMove && !bk && !kingInDanger(board, false)){
+              if (!bkr && board[5] == "_" && board[6] == "_" && !kingInDanger(movePiece([4, 5], board), false)){
+                moves.push([0, 0]);
+              }
+              if (!bqr && board[1] == "_" && board[2] == "_" && board[3] == "_" && !kingInDanger(movePiece([4, 3], board), false)){
+                moves.push([1, 1]);
+              }
+            }
+          }
+          // Castling in Chess960
+          // min, max, king, kingAC, kq
+          if (variant == 2){
+            if (whiteToMove && !wk && !kingInDanger(board, true)){
+              let sq = [61, 62, 56+kr, 56+kk];
+              if (!wkr && allClear(Math.min(...sq), Math.max(...sq), 56+kk, 62, 0)){
+                moves.push([0, 0]);
+              }
+              sq = [58, 59, 56+qr, 56+kk];
+              if (!wqr && allClear(Math.min(...sq), Math.max(...sq), 56+kk, 58, 1)){
+                moves.push([1, 1]);
+              }
+            }
+            if (!whiteToMove && !bk && !kingInDanger(board, false)){
+              let sq = [kr, kk, 5, 6];
+              if (!bkr && allClear(Math.min(...sq), Math.max(...sq), kk, 6, 0)){
+                moves.push([0, 0]);
+              }
+              sq = [qr, kk, 2, 3];
+              if (!bqr && allClear(Math.min(...sq), Math.max(...sq), kk, 2, 1)){
+                moves.push([1, 1]);
+              }
+            }
+          }
+          //Crazyhouse
+          if (variant == 1){
+            for (let i = 0; i <= 63; i++){
+              if (whiteToMove){
+                for (let p in wpocket){
+                  if (((i > 7 && i < 56) || wpocket[+p] != "p") && board[i] == "_"){
+                    moves.push([+p+64, i]);
+                  }
+                }
+              }else{
+                for (let p in bpocket){
+                  if (((i > 7 && i < 56) || bpocket[+p] != "P") && board[i] == "_"){
+                    moves.push([+p+64, i]);
+                  }
+                }
+              }
+            }
+          }
+          //console.log(moves.includes([0,0]), moves.includes([1,1]));
+          //console.log(hasMoved)
+          //Antichess
+          if (variant == 5){
+            let moves2 = moves.filter(function(m){return board[m[1]] != "_"});
+            if (moves2.length > 0) moves = moves2;
+            if (moves.length == 0){
+              let stillExists = false;
+              for (let p of board){
+                if (slf.includes(p)){
+                  stillExists = true;
+                  break;
+                }
+              }
+              if (stillExists){
+                result = `<b>STALEMATE - ${whiteToMove? "white":"black"} is victorious</b>`;
+              }else{
+                result = `<b>${whiteToMove?"WHITE":"BLACK"}'S GONE - ${whiteToMove? "white":"black"} is victorious</b>`;
+                if (moveCount % 2 == 0){
+                  str = str.slice(0, str.lastIndexOf("<")) + "#<" + str.slice(str.lastIndexOf("<") + 1, str.length);
+                }else{
+                  str += "#";
+                }
+                str = str.replace("+", "");
+              }
+              break;
+            }
+          }else{
+            moves = moves.filter(function(m){return !kingInDanger(movePiece(m, board), whiteToMove)});
+          }
+          //console.log(moves);
+          if (variant == 8){
+            moves = moves.filter(function(m){return !kingInDanger(movePiece(m, board), !whiteToMove)});
+            if (rf){
+              let lMoves = moves.filter(function(m){return (board[m[0]].toLowerCase() == "k") && (m[1] < 8)});
+              if (lMoves.length == 0){
+                if (moveCount % 2 == 0){
+                  str = str.slice(0, str.lastIndexOf("<")) + "#<" + str.slice(str.lastIndexOf("<") + 1, str.length);
+                }else{
+                  str += "#";
+                }
+                result = `RACE FINISHED - ${whiteToMove ? "black" : "white"} is victorious`;
+                break;
+              }
+            }
+          }
+          var move = rand(moves);
+          if (moves.length == 0 && variant != 5){
+            kingInDanger(board, whiteToMove) ? str = str.slice(0, str.lastIndexOf("+")) + "#" + str.slice(str.lastIndexOf("+") + 1, str.length) : 0;
+            result = kingInDanger(board, whiteToMove) ? `<b>CHECKMATE - ${whiteToMove ? "black" : "white"} is victorious</b>` : "<b>STALEMATE</b>";
+            break;
+          }
+          //console.log(ep)
+          moves.splice(moves.indexOf(move), 1);
+          if (moveCount % 2 == 0){
+            str += `${(moveCount/2)+1}. ${humanize(move, board, moves)}`;
+            forTest += `<br>${(moveCount/2)+1}. ${move[0]}, ${move[1]}`;
+          }else{
+            str += ` ${humanize(move, board, moves)}<br>`;
+            forTest += ` ${move[0]}, ${move[1]}`;
+          }
+          // For castling
+          if (move.includes(0)){
+            bqr = true;
+          }
+          if (move.includes(7)){
+            bkr = true;
+          }
+          if (move.includes(56)){
+            wqr = true;
+          }
+          if (move.includes(63)){
+            wkr = true;
+          }
+          if (board[move[0]] == "k"){
+            bk = true;
+          }
+          if (board[move[0]] == "K"){
+            wk = true;
+          }
+          if (variant == 2){
+            if (whiteToMove){
+              if (move[0] == qr+56){
+                wqr = true;
+              }
+              if (move[0] == kr+56){
+                wkr = true;
+              }
+            }else{
+              if (move[0] == qr){
+                bqr = true;
+              }
+              if (move[0] == kr){
+                bkr = true;
+              }
+            }
+          }
+          // KING OF THE HILL
+          if (variant == 3 && board[move[0]].toUpperCase() == "K" && [27, 28, 35, 36].includes(move[1])){
+            if (moveCount % 2 == 1){
+              str = str.slice(0, str.lastIndexOf("<")) + "#<" + str.slice(str.lastIndexOf("<") + 1, str.length);
+            }else{
+              str += "#";
+            }
+            result = `KING IN THE CENTER - ${whiteToMove ? "white" : "black"} is victorious`;
+            board = movePiece(move, board);
+            break;
+          }
+          board = movePiece(move, board);
+          if (variant == 8){
+            let king = whiteToMove ? "K" : "k";
+            if (board.indexOf(king) < 8){
+              if (rf){ 
+                result = `DRAW - Race finished`;
+                break;
+              }else{
+                rf = true;
+              }
+            }else if (rf){
+              if (moveCount % 2 == 1){
+                str = str.slice(0, str.lastIndexOf("<")) + "#<" + str.slice(str.lastIndexOf("<") + 1, str.length);
+              }else{
+                str += "#";
+              }
+              result = `RACE FINISHED - ${whiteToMove ? "black" : "white"} is victorious`;
+              break;
+            }
+          }
+          if (variant == 7){
+            exists = false;
+            for (let s of board){
+              if (s == s.toUpperCase()) exists = true;
+            }
+          }
+          if (variant == 7 && !exists){
+            str = str.slice(0, str.lastIndexOf("+")) + "#" + str.slice(str.lastIndexOf("+") + 1, str.length);
+            result = `WHITE'S GONE - black is victorious`;
+            break;
+          }
+          let king = whiteToMove ? "k" : "K";
+          if (variant == 6 && board.indexOf(king) == -1){
+            str = str.slice(0, str.lastIndexOf("+")) + "#" + str.slice(str.lastIndexOf("+") + 1, str.length);
+            result = `KING'S BLOWN AWAY - ${whiteToMove ? "white" : "black"} is victorious`;
+            break;
+          }
+          if (kingInDanger(board, !whiteToMove)){
+            whiteToMove? wchecks++ : bchecks++;
+          }
+          // THREE-CHECK
+          if (variant == 4 && ((whiteToMove && wchecks == 3) || (!whiteToMove && bchecks == 3))){
+            str = str.slice(0, str.lastIndexOf("+")) + "#" + str.slice(str.lastIndexOf("+") + 1, str.length);
+            result = `THREE CHECKS - ${whiteToMove ? "white" : "black"} is victorious`;
+            break;
+          }
+          if ((move[0] == 0 && move[1] == 0) || (move[0] == 1 && move[1] == 1)){
+            whiteToMove ? wk = true : bk = true;
+            //break;
+          }
+          ep = -10;
+          console.log(move);
+          if (move.includes("EP")){
+            console.log(" yes");
+            ep = rowcol(move[0]).col;
+          }
+          console.log(ep);
+          if (move.includes("ep")){
+            console.log(", ^IHAIHAIHAUHWIHWUGS")
+          }
+          if (move[0] > 63){
+            if (whiteToMove){
+              wpocket.splice(move[0]-64, 1);
+            }else{
+              bpocket.splice(move[0]-64, 1);
+            }
+          }
+          if (move.length == 3 && [0,7].includes(rowcol(move[1]).row)){
+            promoted.push(move[1]);
+          }
+          if (promoted.includes(move[0])){
+            promoted.splice(promoted.indexOf(move[0]), 1);
+            promoted.push(move[1]);
+          }
+          //console.log(move, humanize(move, board, moves));
+          //console.log(board);
+          //console.log(humanize(move, board));
+          //console.log(board.length != 64 ? board.length : "");
+          whiteToMove = !whiteToMove;
+          // Switch opp and slf.
+          temp = opp;
+          opp = slf;
+          slf = temp;
+          moveCount++;
+          //if (moveCount == 600) break;
+          //console.log(board);
+          for (let t of board){
+            switch (t.toUpperCase()){
+              case "R":
+              case "Q":
+              case "P":
+                v = 10;
+                break;
+              case "N":
+              case "B":
+                v += 5;
+                break;
+            } // Stops game if value is too little (draw)
+            if (v >= 10){
+              break;
+            }
+          }
+          //console.log("ok");
+          move = [];
+          if (v < 10 && ![1, 3, 5, 8].includes(variant)){
+            result = "<b>DRAW - Insufficient material</b>";
+            break;
+          }
+          v = 0;
+        }
+        var f = "";
+        for (let i of board){
+          f += i;
+        }
+        str = `[White "${randomName()}"]<br>[Black "${randomName()}"]<br>[WhiteElo "${randint(2100)+400}"]<br>[BlackElo "${randint(2100)+400}"]<br>[Date "${randomDate()}"]<br>${str}`;
+        if (!$('#separate').checked){
+          str = str.replaceAll('<br>', ' ');
+        }
+        $('#game').innerHTML = `${str}<br>${result}`; // + forTest;
+        //console.log(wpocket, bpocket);
+        $("#copyable").value = str.replace(/<br>/g,'\n');
+        for (let t in board){
+          let o = board[t].toLowerCase();
+          //let h = (o == "r" || o == "b" || o == "n" ? 0.8 : o == "k" || o == "q" ? 1 : o == "p" ? 0.6 : 0);
+          $(`#t${t}`).innerHTML = (board[t] != "_" ? `<img src="${imageify(board[t])}.svg" height="${base/10}px">` : "");
+        }
+      }
+      function copy(){
+        let game = $("#copyable");
+        //game.focus();
+        game.select();
+        game.setSelectionRange(0, 99999);
+        if (navigator.clipboard){
+          navigator.clipboard.writeText(game.value);
+        }
+      
+        /*var selection = window.getSelection();
+        var range = document.createRange();
+        range.selectNodeContents($("#copyable"));
+        selection.removeAllRanges();
+        selection.addRange(range);*/
+        try{
+          let successful = document.execCommand("copy");
+          $("#copy").innerHTML = successful ? "Copied successfully!" : "Failed to copy.";
+          $("#copy").style.backgroundColor = successful ? "#00FFBB" : "#888888";
+        }catch(err){
+          $("#copy").innerHTML = "Unable to copy.";
+        }
+      }
+    </script> 
+  </body>
+</html>

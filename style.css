@@ -1,0 +1,42 @@
+body{
+  height: 100%;
+  width: 100%;
+  color: white;
+  background-color: black;
+}
+
+a{
+  color: #AAEEEE;
+}
+
+.monospace{
+  font-family: "Courier New", monospace;
+}
+
+.dark{
+  background-color: #7294B6;
+}
+
+.light{
+  background-color:#90B4D6;
+}
+
+table, tr, td{
+  border: 0px;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+#copy{
+  display: none;
+  border-radius: 10px;
+  background-color: #888888;
+}
+
+#copyable{
+  display:none;
+}
+
+button{
+  font-size: 200%;
+}

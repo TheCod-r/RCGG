@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Random Chess Game Generator!</title>
+  </head>
+  <body>
+    <h1>Click on the button below to generate a random chess game!</h1>
+    <button id="button" onclick="generate()">Go!</button>
+    <script>
+      const $ = q => document.querySelector(q);
+      var position = "";
+      var board = [];
+      const black = "rnbqkp".split``;
+      const white = "RNBQKP".split``;
+      var whiteToMove = true;
+      var rank = 0; // row
+      var file = 0; // column
+      var testRank = 0;
+      var testFile = 0; // For testing whether a move is legal
+      const alph = "abcdefgh".split``;
+      var castling = [true,true,true,true,true,true]; // Black's queenside rook, king, kingside rook, and white's haven't moved yet
+      //document.write(humanize("0001"));
+      var castlingMoves = ["OO","OOO","oo","ooo"];
+      // Moves will be like "1304" meaning board[1][3] moves to board[0][4], "42ep" en passant, "OO" castling, "OOO" queenside castling, "oo" and "ooo" for black
+      function humanize(move){ // turn "1234" to "Be5"
+        if (move == "OOO" || move == "ooo"){
+          return "O-O-O";
+        }else if (move == "OO" || move == "oo"){
+          return "O-O";
+        }else if (move.includes("ep"){
+          return `${board[parseInt(move[0])][parseInt(move[1])]} e.p.`;
+
+        }else{
+          return `${board[parseInt(move[0])][parseInt(move[1])]}${board[parseInt(move[2])][parseInt(move[3])] == "_" ? "" : "x"}${alph[parseInt(move[3])]}${8-parseInt(move[2])}`;
+        }
+      }
+      function movePiece(bo, move){
+        var boa = bo;
+        if (move.includes("ep")){
+          // en possont :D
+        }else if (castlingMoves.includes(move)){
+          // Castle
+          var bottom = boa[7]
+          var top = boa[0]
+          switch(move){
+            case "OO":
+              bottom[4] = "_";
+              bottom[5] = "R";
+              bottom[6] = "K";
+              bottom[7] = "_";
+              break;
+            case "OOO":
+              bottom[0] = "_";
+              bottom[2] = "K";
+              bottom[3] = "R";
+              bottom[4] = "_";
+              break;
+            case "oo":
+              top[4] = "_";
+              top[5] = "R";
+              top[6] = "K";
+              top[7] = "_";
+              break;
+            case "ooo":
+              top[0] = "_";
+              top[2] = "K";
+              top[3] = "R";
+              top[4] = "_";
+              break;
+          }
+        }else{
+          boa[parseInt(move[2])][parseInt(move[3])] == boa[parseInt(move[0])][parseInt(move[1])];
+          boa[parseInt(move[0])][parseInt(move[1])] == "_";
+          return boa;
+        }
+      }
+      const randint=max=>Math.floor(Math.random()*(max+1))
+      function generateMove(bo){
+        var legalMoves = [];
+        for (const row of bo){
+          for (const tile of row){
+            if (whiteToMove && white.includes(tile)){ // If there's a white piece in the tile
+              switch (tile){
+                case "R":
+                  // What if there's a rook in that tile?
+              }
+            }
+            file++;
+          }
+          file = testFile = 0;
+          rank++;
+          testRank = rank;
+        }
+        return legalMoves[randint(legalMoves.length-1)]; // Return a randomly selected move
+      }
+      function generate(){
+        board = [];
+        whiteToMove = true;
+        position = "rnbqkbnr/pppppppp/________/________/________/________/PPPPPPPP/RNBQKBNR";
+        rank = file = testRank = testFile = 0;
+        for (const row of position.split`/`){
+          board.push(row.split``);
+        }
+        document.write(humanize("0001"));
+        while (true){
+          //
+          whiteToMove = !whiteToMove;
+          break;
+        }
+      });
+    </script> 
+  </body>
+</html>
