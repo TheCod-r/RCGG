@@ -116,7 +116,7 @@
       const pieceSets = "alpha,anarcandy,california,cardinal,cburnett,celtco,chess7,chessnut,companion,disguised,dubrovny,fantasy,fresca,gioco,governor,horsey,icpieces,kosal,leipzig,letter,libra,maestro,merida,mono,pirouetti,pixel,reillycraig,riohacha,shapes,spatial,taunty,tatiana".split`,`;
       var pieceSetURL = "";
       function changePieceSet(){
-        pieceSetURL = "https://raw.githubusercontent.com/lichess-org/lila/41809e90ff3ddcc1c422403a3c38b661dc5ce5f9/public/piece/alpha/"+pieceSets[$("#pieceSet").selectedIndex];
+        pieceSetURL = "https://raw.githubusercontent.com/lichess-org/lila/41809e90ff3ddcc1c422403a3c38b661dc5ce5f9/public/piece/"+pieceSets[$("#pieceSet").selectedIndex]+"/";
       }
       changePieceSet();
       function randomName(){
