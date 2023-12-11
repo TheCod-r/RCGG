@@ -3,19 +3,8 @@
   <head>
     <title>Random Chess Game Generator!</title>
     <link rel="preload" as="style" type="text/css" href="style.css" crossorigin>
-    <link rel="icon" type="image/x-icon" href="bK.svg">
-    <link rel="prefetch" href="bK.svg">
-    <link rel="prefetch" href="wK.svg">
-    <link rel="prefetch" href="bQ.svg">
-    <link rel="prefetch" href="wQ.svg">
-    <link rel="prefetch" href="bP.svg">
-    <link rel="prefetch" href="wP.svg">
-    <link rel="prefetch" href="bR.svg">
-    <link rel="prefetch" href="wR.svg">
-    <link rel="prefetch" href="bB.svg">
-    <link rel="prefetch" href="wB.svg">
-    <link rel="prefetch" href="bN.svg">
-    <link rel="prefetch" href="wN.svg">
+    <link rel="icon" type="image/x-icon" href="pieces/bK.svg">
+    <link rel="prefetch" href="pieces/bK.svg">
     <link rel="stylesheet" type="text/css" href="style.css">
   </head>
   <body>
@@ -25,8 +14,44 @@
       <li>Standard chess and all <a href="https://lichess.org/variant/" target="_blank">8 Lichess variants</a> are supported.</li>
       <li>The code for standard chess took around a week to make, and so did making the 8 variants.</li>
       <li>This whole thing was made from scratch.</li>
-      <li>The piece set used here is <a href='https://github.com/lichess-org/lila/tree/master/public/piece/merida' target='_blank'>Merida</a> from Lichess!</li>
+      <li>The piece sets avaible here are from <a href='https://github.com/lichess-org/lila/tree/master/public/piece/' target='_blank'>Lichess' GitHub</a>!</li>
     </ul>
+    <p>Choose a piece set:</p>
+    <select id="pieceSet" onchange="changePieceSet()">
+      <option>Alpha</option>
+      <option>Anarcandy</option>
+      <option>Caliente</option>
+      <option>California</option>
+      <option>Cardinal</option>
+      <option>Cburnett</option>
+      <option>Celtic</option>
+      <option>Chess7</option>
+      <option>Chessnut</option>
+      <option>Companion</option>
+      <option>Disguised</option>
+      <option>Dubrovny</option>
+      <option>Fantasy</option>
+      <option>Fresca</option>
+      <option>Gioco</option>
+      <option>Governor</option>
+      <option>Horsey</option>
+      <option>Icpieces</option>
+      <option>Kosal</option>
+      <option>Leipzig</option>
+      <option>Letter</option>
+      <option>Libra</option>
+      <option>Maestro</option>
+      <option selected="selected">Merida</option>
+      <option>Mono</option>
+      <option>Pirouetti</option>
+      <option>Pixel</option>
+      <option>Reillycraig</option>
+      <option>Riohacha</option>
+      <option>Shapes</option>
+      <option>Spatial</option>
+      <option>Staunty</option>
+      <option>Tatiana</option>
+    </select><br>
     <p>Pick a variant:</p>
     <select id="variant">
       <option>Standard</option>
@@ -88,6 +113,12 @@
       const prom = "RNBQK".split``;
       const rand = l => l[Math.floor(Math.random() * l.length)];
       const randint = max => Math.floor(Math.random() * (max + 1));
+      const pieceSets = "alpha,anarcandy,california,cardinal,cburnett,celtco,chess7,chessnut,companion,disguised,dubrovny,fantasy,fresca,gioco,governor,horsey,icpieces,kosal,leipzig,letter,libra,maestro,merida,mono,pirouetti,pixel,reillycraig,riohacha,shapes,spatial,taunty,tatiana".split`,`;
+      var pieceSetURL = "";
+      function changePieceSet(){
+        pieceSetURL = "https://raw.githubusercontent.com/lichess-org/lila/41809e90ff3ddcc1c422403a3c38b661dc5ce5f9/public/piece/alpha/"pieceSets[$("#pieceSet").selectedIndex];
+      }
+      changePieceSet();
       function randomName(){
         let freq = [0, 0];
         var fullName = [];
@@ -149,7 +180,7 @@
       //Show initial position in board
       var board = "rnbqkbnrpppppppp________________________________PPPPPPPPRNBQKBNR";
       for (let t in board){
-        let o = board[t].toLowerCase();
+        //let o = board[t].toLowerCase();
         //let h = (o == "r" || o == "b" || o == "n" ? 0.8 : o == "k" || o == "q" ? 1 : o == "p" ? 0.6 : 0);
         $(`#t${t}`).innerHTML = (board[t] != "_" ? `<img src="${imageify(board[t])}.svg" height="${base/10}px">` : "");
       }
@@ -375,7 +406,7 @@
         }; // Rows 0...7 (a-h files)
       }
       function imageify(p){
-        return (p==p.toLowerCase()?"b":"w")+p.toUpperCase();
+        return pieceSetURL+(p==p.toLowerCase()?"b":"w")+p.toUpperCase();
       }
       function kingInDanger(b,isWhite){
         if (variant == 6){
@@ -1241,9 +1272,9 @@
                 }
               }
               if (stillExists){
-                result = `<b>STALEMATE - ${whiteToMove? "white":"black"} is victorious</b>`;
+                result = `STALEMATE - ${whiteToMove? "white":"black"} is victorious`;
               }else{
-                result = `<b>${whiteToMove?"WHITE":"BLACK"}'S GONE - ${whiteToMove? "white":"black"} is victorious</b>`;
+                result = `${whiteToMove?"WHITE":"BLACK"}'S GONE - ${whiteToMove? "white":"black"} is victorious`;
                 if (moveCount % 2 == 0){
                   str = str.slice(0, str.lastIndexOf("<")) + "#<" + str.slice(str.lastIndexOf("<") + 1, str.length);
                 }else{
@@ -1439,7 +1470,7 @@
           //console.log("ok");
           move = [];
           if (v < 10 && ![1, 3, 5, 8].includes(variant)){
-            result = "<b>DRAW - Insufficient material</b>";
+            result = "DRAW - Insufficient material";
             break;
           }
           v = 0;
@@ -1452,7 +1483,7 @@
         if (!$('#separate').checked){
           str = str.replaceAll('<br>', ' ');
         }
-        $('#game').innerHTML = `${str}<br>${result}`; // + forTest;
+        $('#game').innerHTML = `${str}<br><b>${result}</b>`; // + forTest;
         //console.log(wpocket, bpocket);
         $("#copyable").value = str.replace(/<br>/g,'\n');
         for (let t in board){
